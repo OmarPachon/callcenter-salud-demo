@@ -75,7 +75,7 @@ def webhook():
                      f"1. SÍ\n"
                      f"2. NO")
         else:
-            msg.body("Su número de identificación no se encuentra en base de datos. Por favor, acérquese a su EPS para actualizar su estado; fue un gusto atenderte.")
+            msg.body("Su número de identificación no se encuentra en base de datos. Por favor verifícalo o acérquese a su EPS para actualizar su estado; fue un gusto atenderte.")
 
     return str(resp)
 
