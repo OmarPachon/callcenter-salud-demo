@@ -4,36 +4,48 @@ from twilio.twiml.messaging_response import MessagingResponse
 import pandas as pd
 import os
 
-# --- Cargar bases de datos ---
+# --- PASO 1: Cargar las bases de datos ---
 try:
+    # Base de pacientes
     df_pacientes = pd.read_excel("pacientes.xlsx", dtype={"Numero_Documento": str, "Departamento": str, "Ciudad": str})
     print("✅ pacientes.xlsx cargado correctamente.")
-except Exception as e:
-    print(f"❌ Error al cargar pacientes.xlsx: {e}")
-    exit()
 
-try:
+    # Base de municipios (DANE)
     df_municipios = pd.read_excel("DaneMpios.xlsx", dtype={"CodigoDane": str})
     print("✅ DaneMpios.xlsx cargado correctamente.")
 except Exception as e:
-    print(f"❌ Error al cargar DaneMpios.xlsx: {e}")
+    print(f"❌ Error al cargar los archivos: {e}")
     exit()
 
-# --- Obtener nombre del municipio ---
+# --- PASO 2: Función para obtener el nombre del municipio ---
 def obtener_municipio(cod_depto, cod_mpio):
-    cod_depto = str(cod_depto).strip().zfill(2)
-    cod_mpio = str(cod_mpio).strip().zfill(3)
-    codigo_dane = cod_depto + cod_mpio
+    # Asegurar formato correcto
+    cod_depto = str(cod_depto).strip().zfill(2)  # "5" → "05"
+    cod_mpio = str(cod_mpio).strip().zfill(3)    # "1" → "001"
+    codigo_dane = cod_depto + cod_mpio            # "05" + "001" → "05001"
 
+    # 🔍 Depuración: ver qué código se está formando
+    print(f"🔍 FORMANDO CÓDIGO DANE")
+    print(f"   Departamento: '{cod_depto}'")
+    print(f"   Ciudad: '{cod_mpio}'")
+    print(f"   Código Dane completo: '{codigo_dane}'")
+
+    # Buscar en DaneMpios
     resultado = df_municipios[df_municipios["CodigoDane"] == codigo_dane]
+    
     if not resultado.empty:
-        return resultado.iloc[0]["Municipio"]
-    return "Desconocido"
+        municipio = resultado.iloc[0]["Municipio"]
+        print(f"   ✅ Municipio encontrado: {municipio}")
+        return municipio
+    else:
+        print(f"   ❌ No se encontró el municipio para {codigo_dane}")
+        return "Desconocido"
 
-# --- Buscar paciente ---
+# --- PASO 3: Función para buscar paciente ---
 def buscar_paciente(documento):
     documento = str(documento).strip().replace(" ", "").replace("-", "")
     resultado = df_pacientes[df_pacientes["Numero_Documento"] == documento]
+    
     if not resultado.empty:
         p = resultado.iloc[0]
         municipio = obtener_municipio(p["Departamento"], p["Ciudad"])
@@ -45,7 +57,7 @@ def buscar_paciente(documento):
         }
     return None
 
-# --- Iniciar Flask ---
+# --- PASO 4: Iniciar Flask ---
 app = Flask(__name__)
 
 @app.route("/webhook", methods=["POST"])
@@ -56,8 +68,9 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
+    # --- Lógica del bot ---
     if "hola" in incoming_msg.lower():
-        msg.body("Hola, bienvenido al centro de salud. Por favor, envía tu número de documento:")
+        msg.body("Hola, bienvenido al centro de agendamiento virtual de Promesalud IPS, te acompañaré en tu proceso de asignación de cita. Por favor, ingresa tu número de documento:")
     else:
         paciente = buscar_paciente(incoming_msg)
         if paciente:
@@ -71,11 +84,12 @@ def webhook():
 
     return str(resp)
 
+# --- Ruta de prueba ---
 @app.route("/")
 def home():
     return "Bot de salud activo 🟢"
 
-# --- Iniciar servidor (para Render)
+# --- Iniciar servidor ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
