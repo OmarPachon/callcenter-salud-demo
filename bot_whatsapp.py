@@ -2,39 +2,39 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 import pandas as pd
+import os
 
-# --- PASO 1: Cargar las bases de datos ---
+# --- Cargar bases de datos ---
 try:
-    # Base de pacientes
     df_pacientes = pd.read_excel("pacientes.xlsx", dtype={"Numero_Documento": str, "Departamento": str, "Ciudad": str})
     print("✅ pacientes.xlsx cargado correctamente.")
+except Exception as e:
+    print(f"❌ Error al cargar pacientes.xlsx: {e}")
+    exit()
 
-    # Base de municipios (DANE)
+try:
     df_municipios = pd.read_excel("DaneMpios.xlsx", dtype={"CodigoDane": str})
     print("✅ DaneMpios.xlsx cargado correctamente.")
 except Exception as e:
-    print(f"❌ Error al cargar los archivos: {e}")
+    print(f"❌ Error al cargar DaneMpios.xlsx: {e}")
     exit()
 
-# --- PASO 2: Función para obtener el nombre del municipio ---
+# --- Obtener nombre del municipio ---
 def obtener_municipio(cod_depto, cod_mpio):
-    # Asegurar formato: 2 dígitos para departamento, 3 para ciudad
     cod_depto = str(cod_depto).strip().zfill(2)
     cod_mpio = str(cod_mpio).strip().zfill(3)
-    codigo_dane = cod_depto + cod_mpio  # Ej: "05" + "001" → "05001"
+    codigo_dane = cod_depto + cod_mpio
 
-    # Buscar en DaneMpios
     resultado = df_municipios[df_municipios["CodigoDane"] == codigo_dane]
     if not resultado.empty:
         return resultado.iloc[0]["Municipio"]
     return "Desconocido"
 
-# --- PASO 3: Función para buscar paciente ---
+# --- Buscar paciente ---
 def buscar_paciente(documento):
     documento = str(documento).strip().replace(" ", "").replace("-", "")
     resultado = df_pacientes[df_pacientes["Numero_Documento"] == documento]
-    
-    if not resultado.empty():
+    if not resultado.empty:
         p = resultado.iloc[0]
         municipio = obtener_municipio(p["Departamento"], p["Ciudad"])
         return {
@@ -45,7 +45,7 @@ def buscar_paciente(documento):
         }
     return None
 
-# --- PASO 4: Iniciar Flask ---
+# --- Iniciar Flask ---
 app = Flask(__name__)
 
 @app.route("/webhook", methods=["POST"])
@@ -56,7 +56,6 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # --- Lógica del bot ---
     if "hola" in incoming_msg.lower():
         msg.body("Hola, bienvenido al centro de salud. Por favor, envía tu número de documento:")
     else:
@@ -72,11 +71,11 @@ def webhook():
 
     return str(resp)
 
-# --- Ruta de prueba ---
 @app.route("/")
 def home():
     return "Bot de salud activo 🟢"
 
-# --- Iniciar servidor ---
+# --- Iniciar servidor (para Render)
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
