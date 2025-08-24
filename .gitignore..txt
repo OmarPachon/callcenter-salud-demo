@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+.DS_Store
+.env
+.DS_Store?
+*.sublime-project
+*.sublime-workspace
