@@ -36,7 +36,9 @@ def obtener_nombre_eps(codigo_eps):
 def buscar_paciente(documento):
     documento = str(documento).strip().replace(" ", "").replace("-", "")
     resultado = df_pacientes[df_pacientes["Numero_Documento"] == documento]
-    if not resultado.empty():
+    
+    # ✅ CORRECCIÓN: empty es un atributo, no una función → sin ()
+    if not resultado.empty:
         p = resultado.iloc[0]
         municipio = obtener_municipio(p["Departamento"], p["Ciudad"])
         nombre_eps = obtener_nombre_eps(p["Codigo_EPS"])
