@@ -89,15 +89,8 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # --- Lógica del bot ---
-    if "hola" in incoming_msg.lower():
-        # Reiniciar estado
-        if sender in estado_usuario:
-            del estado_usuario[sender]
-
-        msg.body("Hola, bienvenido al centro de agendamiento virtual de Promesalud IPS, te acompañaré en tu proceso de asignación de cita. Por favor, ingresa tu número de documento:")
-
-    elif sender in estado_usuario:
+    # --- 1. Si el usuario ya está en un flujo ---
+    if sender in estado_usuario:
         estado = estado_usuario[sender]
         etapa = estado["etapa"]
 
@@ -167,6 +160,14 @@ def webhook():
             else:
                 msg.body("Por favor, responde con 1, 2 o 3.")
 
+    # --- 2. Si el usuario empieza desde cero ---
+    elif "hola" in incoming_msg.lower():
+        # Reiniciar estado
+        if sender in estado_usuario:
+            del estado_usuario[sender]
+
+        msg.body("Hola, bienvenido al centro de agendamiento virtual de Promesalud IPS, te acompañaré en tu proceso de asignación de cita. Por favor, ingresa tu número de documento:")
+
     else:
         # --- Búsqueda inicial del paciente ---
         paciente = buscar_paciente(incoming_msg)
@@ -192,7 +193,6 @@ def webhook():
                 msg.body("No encontramos tu documento. Por favor, vuelve a ingresarlo para verificarlo.")
             else:
                 # ✅ Corrección: Asegurarnos de que no se sobrescriba
-                # Si ya está en reintentar, y vuelve a enviar un documento, pasamos a preguntar EPS
                 if estado_usuario[sender]["etapa"] == "reintentar_documento":
                     estado_usuario[sender]["etapa"] = "preguntar_eps"
                     msg.body("Tu número de identificación no se encuentra en nuestra base de datos.\n\n"
