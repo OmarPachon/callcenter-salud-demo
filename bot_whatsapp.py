@@ -191,14 +191,18 @@ def webhook():
                 }
                 msg.body("No encontramos tu documento. Por favor, vuelve a ingresarlo para verificarlo.")
             else:
-                # Segundo intento fallido → preguntar EPS
-                estado_usuario[sender]["etapa"] = "preguntar_eps"
-                msg.body("Tu número de identificación no se encuentra en nuestra base de datos.\n\n"
-                         "¿Eres afiliado a una de estas EPS?\n"
-                         "1. E.P.S. Sanitas S.A.\n"
-                         "2. FONDO DE PRESTACIONES SOCIALES DEL MAGISTERIO\n"
-                         "3. NINGUNA DE LAS ANTERIORES\n\n"
-                         "Por favor, responde con el número de la opción.")
+                # ✅ Corrección: Asegurarnos de que no se sobrescriba
+                # Si ya está en reintentar, y vuelve a enviar un documento, pasamos a preguntar EPS
+                if estado_usuario[sender]["etapa"] == "reintentar_documento":
+                    estado_usuario[sender]["etapa"] = "preguntar_eps"
+                    msg.body("Tu número de identificación no se encuentra en nuestra base de datos.\n\n"
+                             "¿Eres afiliado a una de estas EPS?\n"
+                             "1. E.P.S. Sanitas S.A.\n"
+                             "2. FONDO DE PRESTACIONES SOCIALES DEL MAGISTERIO\n"
+                             "3. NINGUNA DE LAS ANTERIORES\n\n"
+                             "Por favor, responde con el número de la opción.")
+                else:
+                    msg.body("Por favor, responde con la opción correcta.")
 
     return str(resp)
 
